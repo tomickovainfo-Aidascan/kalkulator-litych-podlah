@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulačka litých podlah</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8; --surface: #ffffff; --surface2: #f2f2f2; --border: #ddd;
+    --accent: #c0392b; --accent2: #e07a30; --text: #1a1a1a; --text2: #666;
+    --green: #27ae60; --red: #c0392b; --blue: #2980b9; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Sora', sans-serif; font-size: 14px; min-height: 100vh; padding: 20px 14px 60px; }
+
+  header { max-width: 880px; margin: 0 auto 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header h1 span { color: var(--accent); }
+  .cemex-badge { background: #e8232a; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+  header p { color: var(--text2); font-size: 12px; width: 100%; margin-top: -8px; }
+
+  .layout { max-width: 880px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .layout { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .card.full { grid-column: 1 / -1; }
+
+  .card-title { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; display: block; width: 3px; height: 13px; background: var(--accent); border-radius: 2px; }
+
+  .field { margin-bottom: 11px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+
+  input[type="number"], input[type="text"], select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 13px; padding: 8px 11px; outline: none; transition: border-color 0.15s; -webkit-appearance: none;
+  }
+  select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c0392b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: #fff; }
+
+  .toggle-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .toggle-btn { flex: 1; min-width: 50px; padding: 7px 5px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 500; transition: all 0.15s; text-align: center; }
+  .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #0f0f10; }
+
+  .hint { font-size: 11px; color: var(--text2); margin-top: 4px; font-family: 'DM Mono', monospace; line-height: 1.5; }
+  .hint.warn { color: var(--accent2); }
+  .hint.ok { color: var(--green); }
+  .hint.err { color: var(--red); }
+  .hint.info { color: var(--blue); }
+
+  /* Adresa + geocoding */
+  .addr-row { display: flex; gap: 8px; }
+  .addr-row input { flex: 1; }
+  .addr-btn { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 600; white-space: nowrap; transition: all 0.15s; }
+  .addr-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .addr-btn.loading { opacity: 0.6; pointer-events: none; }
+  .spinner-sm { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Pobočky */
+  .pobocky-list { display: flex; flex-direction: column; gap: 7px; }
+  .pobocka-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; cursor: pointer; background: var(--surface2); transition: all 0.15s; }
+  .pobocka-item:hover { border-color: var(--accent); }
+  .pobocka-item.selected { border-color: var(--accent); background: #fdf0ef; }
+  .pobocka-item.overit { border-color: var(--accent2); opacity: 0.85; }
+  .pobocka-item.overit.selected { background: #fff8f0; }
+  .pobocka-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .pobocka-name { font-size: 13px; font-weight: 600; }
+  .pobocka-dist { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 500; white-space: nowrap; }
+  .pobocka-addr { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .pobocka-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; margin-top: 4px; }
+  .tag-ok { background: #e6f4ed; color: #1a6b3a; border: 1px solid #b2ddc4; }
+  .tag-overit { background: #2a1a08; color: var(--accent2); border: 1px solid #4a3010; }
+  .pobocka-phone { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: 'DM Mono', monospace; }
+
+  /* Materiál */
+  .mat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .mat-item { border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; cursor: pointer; background: var(--surface2); transition: all 0.15s; }
+  .mat-item:hover { border-color: var(--accent); }
+  .mat-item.selected { border-color: var(--accent); background: #fdf0ef; color: var(--text); }
+  .mat-name { font-size: 12px; font-weight: 600; }
+  .mat-sub { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .mat-price { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); margin-top: 4px; }
+
+  /* Příplatky */
+  .priplatek-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #1e1e24; font-size: 12px; }
+  .priplatek-row:last-child { border-bottom: none; }
+  .pp-label { color: var(--text2); }
+  .pp-toggle { display: flex; gap: 5px; }
+  .pp-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 11px; transition: all 0.12s; font-family: 'Sora', sans-serif; }
+  .pp-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* Výsledky */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 12px; }
+  .result-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; }
+  .result-item .lbl { font-size: 10px; color: var(--text2); margin-bottom: 3px; }
+  .result-item .val { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+  .result-item.big { border-color: var(--accent); grid-column: 1 / -1; }
+  .result-item.big .val { font-size: 26px; color: var(--accent); }
+
+  .breakdown { border-top: 1px solid var(--border); padding-top: 12px; }
+  .bd-title { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+  .bd-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1e1e24; font-size: 12px; }
+  .bd-row:last-child { border-bottom: none; }
+  .bd-row .d { color: var(--text2); flex: 1; padding-right: 10px; }
+  .bd-row .a { font-family: 'DM Mono', monospace; font-weight: 500; white-space: nowrap; }
+  .bd-row.total { border-top: 1px solid var(--border); margin-top: 3px; padding-top: 8px; font-weight: 600; }
+  .bd-row.total .d { color: var(--text); }
+  .bd-row.total .a { color: var(--accent); font-size: 14px; }
+
+  .btn-export { margin-top: 14px; width: 100%; padding: 11px; background: var(--accent); border: none; border-radius: 8px; color: #0f0f10; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+  .btn-export:hover { opacity: 0.88; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; grid-column: 1 / -1; }
+  .tab { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 600; transition: all 0.15s; }
+  .tab.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: contents; }
+
+  /* ceník tabulky */
+  .ct { width: 100%; border-collapse: collapse; }
+  .ct th { text-align: left; font-size: 10px; font-weight: 600; color: var(--text2); padding: 0 0 6px 0; letter-spacing: 0.5px; }
+  .ct td { padding: 3px 6px 3px 0; font-size: 12px; }
+  .ct input { padding: 6px 9px; font-size: 12px; }
+  .sl { font-size: 10px; color: var(--text2); padding: 8px 0 3px; font-weight: 600; letter-spacing: 0.5px; }
+
+  .no-pobocka { text-align: center; padding: 20px; color: var(--text2); font-size: 12px; }
+  .doprava-info { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 10px 13px; font-size: 12px; margin-top: 8px; }
+  .doprava-info .di-row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .doprava-info .di-label { color: var(--text2); }
+  .doprava-info .di-val { font-family: 'DM Mono', monospace; color: var(--text); }
+
+@media print {
+  body { background: #fff !important; padding: 0 !important; }
+  header, .layout > .card:not(.full) { display: none !important; }
+  .card.full { display: block !important; box-shadow: none !important; border: none !important; }
+  #nabidka-wrap { padding: 0 !important; }
+  .nabidka-doc { max-width: 100% !important; padding: 12px !important; font-size: 11px !important; }
+  .nabidka-doc .header-firma { padding: 10px 12px !important; }
+  .nabidka-doc .dvoupanel { gap: 8px !important; margin-bottom: 8px !important; }
+  .nabidka-doc .sekce { margin: 8px 0 4px !important; font-size: 9px !important; }
+  .nabidka-doc .params { gap: 6px !important; margin-bottom: 8px !important; }
+  .nabidka-doc .param { padding: 6px 8px !important; }
+  .nabidka-doc .param .val { font-size: 14px !important; }
+  .nabidka-doc table { font-size: 11px !important; }
+  .nabidka-doc table td, .nabidka-doc table th { padding: 4px 6px !important; }
+  .nabidka-doc .rekap { margin-top: 6px !important; }
+  .nabidka-doc .rekap-row { padding: 3px 0 !important; font-size: 11px !important; }
+  .nabidka-doc .rekap-total { padding: 5px 8px !important; font-size: 13px !important; }
+  .nabidka-doc .podminky { padding: 6px 10px !important; font-size: 9.5px !important; margin-top: 6px !important; }
+  .nabidka-doc .footer { padding: 6px 0 !important; font-size: 10px !important; }
+  .btn-row, button { display: none !important; }
+  .uvod { font-size: 11px !important; padding: 6px 10px !important; margin-bottom: 8px !important; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kalkulačka <span>litých podlah</span></h1>
+  <p>Adresa stavby → nejbližší pobočka → materiál → dopravní pásmo → cenová nabídka</p>
+</header>
+
+<div class="layout">
+  <div class="tabs full">
+    <button class="tab active" onclick="switchTab('kalkulator')">Kalkulačka</button>
+    <button class="tab" onclick="switchTab('pumpa')">Pumpa &amp; práce</button>
+    <button class="tab" onclick="switchTab('cenik')">Ceník CEMEX</button>
+  </div>
+
+  <!-- ===== KALKULAČKA ===== -->
+  <div class="tab-content active" id="tab-kalkulator">
+
+    <!-- ZAKÁZKA -->
+    <div class="card">
+      <div class="card-title">Zakázka</div>
+      <div class="field">
+        <label>Plocha (m²)</label>
+        <input type="number" id="plocha" value="130" min="1" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>Tloušťka potěru (mm)</label>
+        <input type="number" id="tloustka" value="60" min="20" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>Sazba DPH</label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-dph-12" onclick="setDph(12)">12 % (RD, byty)</button>
+          <button class="toggle-btn" id="btn-dph-21" onclick="setDph(21)">21 % (ostatní)</button>
+        </div>
+        <div class="hint">12 % platí pro stavby pro bydlení (RD do 350 m², byty), jinak 21 %</div>
+      </div>
+      <div class="field">
+        <label>Zákazník je firma/plátce DPH?</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btn-pdp-ano" onclick="setPdp(true)">Ano</button>
+          <button class="toggle-btn active" id="btn-pdp-ne" onclick="setPdp(false)">Ne</button>
+        </div>
+        <div class="hint">Pokud ano, do nabídky se přidá poznámka o možné přenesené daňové povinnosti (§ 92e)</div>
+      </div>
+      <div class="field">
+        <label>Typ čerpadla</label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-pumpa-male" onclick="setPumpa('male')">Šnekové</button>
+          <button class="toggle-btn" id="btn-pumpa-velke" onclick="setPumpa('velke')">Pístové</button>
+        </div>
+        <div class="hint">Šnekové jen na anhydrit, pístové na beton i anhydrit</div>
+      </div>
+      <div class="field">
+        <label>Podlahové topení?</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btn-top-ne" onclick="setTopeni(false)">Ne</button>
+          <button class="toggle-btn active" id="btn-top-ano" onclick="setTopeni(true)">Ano</button>
+        </div>
+        <div class="hint" id="hint-top">Podlahové topení</div>
+      </div>
+      <div class="field">
+        <label>Fólie PE separační</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btn-folie-ne" onclick="setFolie(false)">Ne</button>
+          <button class="toggle-btn active" id="btn-folie-ano" onclick="setFolie(true)">Ano (20 Kč/m²)</button>
+        </div>
+      </div>
+      <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="setIzolace(!stateIzolace)">
+          Tepelná izolace
+          <span id="izol-arrow" style="font-size:11px;color:var(--text2);transition:transform .2s;display:inline-block;">▼</span>
+        </label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-izol-ne" onclick="setIzolace(false)">Ne</button>
+          <button class="toggle-btn" id="btn-izol-ano" onclick="setIzolace(true)">Ano</button>
+        </div>
+        <div id="izol-field" style="display:none; margin-top:8px;">
+          <select id="sel-typ-izolace" onchange="setTypIzolace(this.value)" style="margin-bottom:6px;">
+            <option value="EPS_100">EPS 100 – běžná podlahová izolace</option>
+            <option value="EPS_150">EPS 150 – vyšší zatížení</option>
+            <option value="EPS_200">EPS 200 – těžké zatížení</option>
+            <option value="XPS_300">XPS 300 kPa – vlhké prostředí, garáže</option>
+            <option value="RIGIFLOOR_4000">Rigifloor 4000 – kročejová izolace</option>
+          </select>
+          <input type="number" id="izolace-mm" value="50" min="10" step="5" oninput="calc()" placeholder="Tloušťka mm">
+          <div class="hint" id="hint-izol-cena">Cena: načítám z DEK...</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Pokládka izolace (Kč/m²)</label>
+        <input type="number" id="c-izol-prace" value="40" step="1" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>Mirelon (bm)</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btn-mir-ne" onclick="setMirelon(false)">Ne</button>
+          <button class="toggle-btn active" id="btn-mir-ano" onclick="setMirelon(true)">Ano</button>
+        </div>
+        <div id="mir-field" style="margin-top:6px">
+          <input type="number" id="mirelon-bm" value="50" min="0" oninput="calc()" placeholder="Délka v bm">
+        </div>
+      </div>
+    </div>
+
+    <!-- ZÁKAZNÍK -->
+    <div class="card">
+      <div class="card-title">Zákazník</div>
+      <div class="field">
+        <label>Jméno / firma</label>
+        <input type="text" id="zak-jmeno" placeholder="Karel Novák">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="text" id="zak-email" placeholder="novak@email.cz">
+      </div>
+      <div class="field">
+        <label>Telefon</label>
+        <input type="text" id="zak-telefon" placeholder="602 123 456">
+      </div>
+      <div class="field">
+        <label>IČO <span style="color:#888;font-weight:400;font-size:11px">(pokud firma)</span></label>
+        <input type="text" id="zak-ico" placeholder="12345678">
+      </div>
+    </div>
+
+    <!-- RUČNÍ KM -->
+    <div class="card" id="rucni-km-card" style="display:none;">
+      <div class="card-title">Ruční úprava vzdálenosti</div>
+      <div class="field">
+        <label>Vzdálenost tam a zpět (km) – přepsat vypočítanou hodnotu</label>
+        <input type="number" id="rucni-km" placeholder="např. 42" min="1" oninput="pouzijRucniKm()">
+        <div class="hint">Omezení na trase – zadej reálnou vzdálenost tam a zpět</div>
+      </div>
+      <div class="field">
+        <button class="toggle-btn" onclick="zrusitRucniKm()" style="flex:0;padding:6px 14px;">Zrušit ruční zadání</button>
+      </div>
+    </div>
+
+    <!-- ADRESA + POBOČKA -->
+    <div class="card">
+      <div class="card-title">Adresa stavby</div>
+      <div class="field">
+        <label>Ulice, město</label>
+        <div class="addr-row">
+          <input type="text" id="adresa" placeholder="např. Náměstí Míru 1, Trutnov" onkeydown="if(event.key==='Enter')geocodeAdresa()">
+          <button class="addr-btn" id="geo-btn" onclick="geocodeAdresa()">Najít</button>
+        </div>
+        <div class="hint" id="hint-geo"></div>
+      </div>
+
+      <div class="field">
+        <label>Typ materiálu (filtr poboček)</label>
+        <select id="mat-filter" onchange="renderPobocky(); calc()">
+          <option value="MAT_CEMLEVEL">CemLevel (cementový litý potěr)</option>
+          <option value="MAT_ANHYLEVEL">AnhyLevel (anhydritový litý potěr)</option>
+          <option value="MAT_BETON_STANDARD">Transportbeton / konstrukční beton</option>
+          <option value="MAT_CM">Cementová mazanina (CM)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Nejbližší pobočky CEMEX</label>
+        <div class="pobocky-list" id="pobocky-list">
+          <div class="no-pobocka">Zadej adresu stavby a klikni Najít</div>
+        </div>
+      </div>
+
+      <div id="doprava-info-box" style="display:none" class="doprava-info">
+        <div class="di-row"><span class="di-label">Vzdálenost (1 cesta)</span><span class="di-val" id="di-km">—</span></div>
+        <div class="di-row"><span class="di-label">Pásmo CEMEX</span><span class="di-val" id="di-pasmo">—</span></div>
+        <div class="di-row"><span class="di-label">Sazba dopravy</span><span class="di-val" id="di-sazba">—</span></div>
+      </div>
+    </div>
+
+    <!-- MATERIÁL CEMEX -->
+    <div class="card full">
+      <div class="card-title">Materiál CEMEX</div>
+      <div class="mat-grid" id="mat-grid">
+        <!-- generováno JS -->
+      </div>
+    </div>
+
+    <!-- PŘÍPLATKY -->
+    <div class="card full">
+      <div class="card-title">Příplatky CEMEX</div>
+      <div id="priplatky-list">
+        <!-- generováno JS -->
+      </div>
+    </div>
+
+    <!-- VÝSLEDEK -->
+    <div class="card full">
+      <div class="card-title">Cenová nabídka</div>
+      <div class="result-grid">
+        <div class="result-item big"><div class="lbl">CELKOVÁ CENA BEZ DPH</div><div class="val" id="r-total">—</div></div>
+        <div class="result-item"><div class="lbl">Cena za m²</div><div class="val" id="r-m2">—</div></div>
+        <div class="result-item"><div class="lbl" id="lbl-dph">Cena s DPH</div><div class="val" id="r-dph">—</div></div>
+        <div class="result-item"><div class="lbl">Objem materiálu</div><div class="val" id="r-objem">—</div></div>
+      </div>
+      <div class="breakdown">
+        <div class="bd-title">Rozpis položek</div>
+        <div id="bd-rows"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="toggle-btn" id="btn-rozpis-ano" onclick="setRozpis(true)" style="flex:1;padding:9px">S rozpisem</button>
+        <button class="toggle-btn active" id="btn-rozpis-ne" onclick="setRozpis(false)" style="flex:1;padding:9px">Bez rozpisu</button>
+      </div>
+      <button class="btn-export" style="margin-bottom:8px;background:var(--surface2);color:var(--accent);border:1px solid var(--accent)" onclick="vytvorHtmlNabidku()">📄 Vytvořit HTML nabídku</button>
+      <button class="btn-export" onclick="exportText()">📋 Zkopírovat nabídku</button>
+      <button class="btn-export" onclick="tiskNabidky()" style="margin-top:8px;background:var(--accent);color:#fff;border:1px solid var(--accent)">🖨️ Tisk / Uložit jako PDF</button>
+    </div>
+
+  </div><!-- /kalkulator -->
+
+  <!-- ===== PUMPA & PRÁCE ===== -->
+  <div class="tab-content" id="tab-pumpa">
+    <div class="card full">
+      <div class="card-title">Pumpa (čerpání)</div>
+      <div class="field">
+        <label>Typ pumpy</label>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-pumpa-male-2" onclick="setPumpa('male')">Šneková</button>
+          <button class="toggle-btn" id="btn-pumpa-velke-2" onclick="setPumpa('velke')">Pístová</button>
+        </div>
+        <div class="hint warn" id="hint-pumpa-warn"></div>
+      </div>
+      <table class="ct" style="margin-top:10px">
+        <tr><th>Položka</th><th>Cena (Kč)</th></tr>
+        <tr><td>Doprava pumpy</td><td><input type="number" id="c-pumpa-male-d" value="0" disabled style="opacity:0.4" oninput="calc()"></td></tr>
+        <tr><td>1. mix čerpání</td><td><input type="number" id="c-pumpa-male-m1" value="5000" oninput="calc()"></td></tr>
+        <tr><td>Každý další mix</td><td><input type="number" id="c-pumpa-male-mn" value="2000" oninput="calc()"></td></tr>
+      </table>
+      <div class="sl" style="margin-top:10px">Pístové čerpadlo</div>
+      <table class="ct">
+        <tr><td>Doprava pumpy</td><td><input type="number" id="c-pumpa-velke-d" value="0" disabled style="opacity:0.4" oninput="calc()"></td></tr>
+        <tr><td>1. mix čerpání</td><td><input type="number" id="c-pumpa-velke-m1" value="6000" oninput="calc()"></td></tr>
+        <tr><td>Každý další mix</td><td><input type="number" id="c-pumpa-velke-mn" value="2000" oninput="calc()"></td></tr>
+      </table>
+    </div>
+    <div class="card full">
+      <div class="card-title">Práce</div>
+      <table class="ct">
+        <tr><th>Položka</th><th>Cena (Kč)</th></tr>
+        <tr><td>Práce do 50 m² (Kč/m²)</td><td><input type="number" id="c-prace-do50" value="150" oninput="calc()"></td></tr>
+        <tr><td>Práce 51–100 m² (Kč/m²)</td><td><input type="number" id="c-prace-do100" value="120" oninput="calc()"></td></tr>
+        <tr><td>Práce nad 100 m² (Kč/m²)</td><td><input type="number" id="c-prace-nad100" value="100" oninput="calc()"></td></tr>
+        <tr><td>Pokládka izolace (Kč/m²)</td><td><input type="number" id="c-izol-prace" value="40" oninput="calc()"></td></tr>
+      </table>
+    </div>
+    <div class="card full">
+      <div class="card-title">Koeficienty a mix</div>
+      <table class="ct">
+        <tr><th>Parametr</th><th>Hodnota</th></tr>
+        <tr><td>Max. objem mixu (m³)</td><td><input type="number" id="c-max-mix" value="7.5" step="0.5" oninput="calc()"></td></tr>
+        <tr><td>Min. fakturovaný mix (m³)</td><td><input type="number" id="c-min-mix" value="5" step="0.5" oninput="calc()"></td></tr>
+        <tr><td>Koeficient ztrát/nepřesnost</td><td><input type="number" id="c-koef-ztrata" value="1" step="0.01" oninput="calc()"></td></tr>
+        <tr><td>Koeficient podlah. topení</td><td><input type="number" id="c-koef-top" value="1" step="0.01" oninput="calc()"></td></tr>
+      </table>
+    </div>
+  </div><!-- /pumpa -->
+
+  <!-- ===== CENÍK CEMEX ===== -->
+  <div class="tab-content" id="tab-cenik">
+
+    <div class="card full">
+      <div class="card-title">Materiály CEMEX (Kč/m³ bez DPH)</div>
+      <div id="cemex-mat-edit"><!-- generováno JS --></div>
+    </div>
+
+    <div class="card full">
+      <div class="card-title">Doprava CEMEX – autodomíchávač (Kč/m³ bez DPH)</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Sazba zahrnuje nakládku + 30 min. vykládku. Min. fakturované množství 5 m³.</p>
+      <div id="cemex-doprava-edit"><!-- generováno JS --></div>
+    </div>
+
+    <div class="card full">
+      <div class="card-title">Příplatky CEMEX</div>
+      <div id="cemex-priplatky-edit"><!-- generováno JS --></div>
+    </div>
+
+  </div><!-- /cenik -->
+
+</div><!-- /layout -->
+
+<script>
+// ===== DATA =====
+
+// Pobočky CEMEX – z PDF
+const POBOCKY = [
+  { id:'BR_VRCHLABI', name:'Vrchlabí / Kunčice', addr:'Kunčice nad Labem, areál LTM 117', lat:50.5875, lon:15.6128, phone:'602 712 427', email:'betonarna.vrchlabi@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM','MAT_COMPACTON'] },
+  { id:'BR_DVUR_KRALOVE', name:'Dvůr Králové n.L.', addr:'Tyršova, 544 01 Dvůr Králové', lat:50.4421, lon:15.8215, phone:'602 463 006', email:'betonarna.dvurkralove@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_JAROMER', name:'Jaroměř', addr:'Langiewiczova, 551 02 Jaroměř', lat:50.3475, lon:15.9332, phone:'606 648 249', email:'betonarna.jaromer@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_OHRAZENICE', name:'Ohrazenice / Semily', addr:'Ohrazenice 270, 511 01 Semily', lat:50.5979, lon:15.1176, phone:'602 464 270', email:'betonarna.ohrazenice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_LIBEREC', name:'Liberec', addr:'Londýnská 460, 460 11 Liberec', lat:50.7782, lon:15.0322, phone:'602 464 280', email:'betonarna.liberec@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_HK_SPRAVCICE', name:'Hradec Králové – Správčice', addr:'Jana Černého, 503 02 Předměřice n.L.', lat:50.255, lon:15.812, phone:'606 627 647', email:'betonarna.spravcice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_HK_PLACICE', name:'Hradec Králové – Plačice', addr:'Pardubická, 500 04 Hradec Králové', lat:50.2, lon:15.785, phone:'606 613 905', email:'betonarna.placice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_HK_SLEZSKE', name:'Hradec Králové – Slezské Předm.', addr:'Bratří Štefanů 986, 500 03 HK', lat:50.216, lon:15.861, phone:'606 642 843', email:'betonarna.hradec@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_SEMTIN', name:'Pardubice – Semtín', addr:'Semtín 102, 533 54 Pardubice', lat:50.045, lon:15.725, phone:'602 186 298', email:'betonarna.semtin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_MLADA_BOLESLAV', name:'Mladá Boleslav', addr:'Dukelská, 293 01 Mladá Boleslav', lat:50.416, lon:14.909, phone:'602 252 489', email:'betonarna.mladaboleslav@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_PODEBRADY', name:'Poděbrady', addr:'Za Bažantnicí, 290 01 Poděbrady', lat:50.142, lon:15.119, phone:'606 635 978', email:'betonarna.podebrady@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_KOLIN', name:'Kolín', addr:'Veltrubská 1527, 280 02 Kolín', lat:50.034, lon:15.217, phone:'606 635 977', email:'betonarna.kolin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_CASLAV', name:'Čáslav', addr:'Chrudimská, 286 01 Čáslav', lat:49.911, lon:15.389, phone:'602 202 690', email:'betonarna.caslav@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_MELNIK', name:'Mělník', addr:'276 01 Mělník-Pšovka', lat:50.35, lon:14.474, phone:'602 770 982', email:'betonarna.melnik@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_DECIN', name:'Děčín', addr:'Benešovská, 405 01 Děčín', lat:50.773, lon:14.201, phone:'602 464 202', email:'betonarna.decin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_USTI', name:'Ústí nad Labem', addr:'Drážďanská 74, 400 07 Ústí n.L.', lat:50.66, lon:14.047, phone:'602 614 209', email:'betonarna.usti@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+];
+
+// Dopravní tabulka CEMEX (bez DPH, Kč/m³) – pásma = vzdálenost tam a zpět
+const CEMEX_DOPRAVA = [
+  {pasmo:5, km_max:5, sazba:210},
+  {pasmo:8, km_max:8, sazba:225},
+  {pasmo:10, km_max:10, sazba:250},
+  {pasmo:13, km_max:13, sazba:285},
+  {pasmo:15, km_max:15, sazba:315},
+  {pasmo:18, km_max:18, sazba:350},
+  {pasmo:20, km_max:20, sazba:380},
+  {pasmo:23, km_max:23, sazba:420},
+  {pasmo:25, km_max:25, sazba:450},
+  {pasmo:28, km_max:28, sazba:475},
+  {pasmo:30, km_max:30, sazba:500},
+  {pasmo:33, km_max:33, sazba:535},
+  {pasmo:35, km_max:35, sazba:550},
+  {pasmo:38, km_max:38, sazba:575},
+  {pasmo:40, km_max:40, sazba:605},
+  {pasmo:43, km_max:43, sazba:650}, // pásmo 38-40 → extrapolace
+  {pasmo:45, km_max:45, sazba:695},
+  {pasmo:50, km_max:50, sazba:750},
+  {pasmo:55, km_max:55, sazba:750}, // >=50km poslední pásmo z ceníku
+  // rozšíření nad 55 km: +25 Kč za každých 5 km (orientační)
+  {pasmo:60, km_max:60, sazba:800},
+  {pasmo:65, km_max:65, sazba:855},
+  {pasmo:70, km_max:70, sazba:895},
+  {pasmo:75, km_max:75, sazba:940},
+  {pasmo:80, km_max:80, sazba:990},
+  {pasmo:85, km_max:85, sazba:1035},
+  {pasmo:90, km_max:90, sazba:1080},
+  {pasmo:95, km_max:95, sazba:1125},
+  {pasmo:100, km_max:100, sazba:1185},
+  // Extrapolace nad 100 km – přírůstek 50 Kč/m³ na každých 5 km
+  {pasmo:105, km_max:105, sazba:1235},
+  {pasmo:110, km_max:110, sazba:1285},
+  {pasmo:115, km_max:115, sazba:1335},
+  {pasmo:120, km_max:120, sazba:1385},
+  {pasmo:125, km_max:125, sazba:1435},
+  {pasmo:130, km_max:130, sazba:1485},
+  {pasmo:140, km_max:140, sazba:1585},
+  {pasmo:150, km_max:150, sazba:1685},
+  {pasmo:160, km_max:160, sazba:1785},
+  {pasmo:170, km_max:170, sazba:1885},
+  {pasmo:180, km_max:180, sazba:1985},
+  {pasmo:200, km_max:200, sazba:2085},
+];
+
+// Materiály CEMEX
+const MARZE_MATERIAL_M3 = 50; // Kč/m³ – Honzova přirážka nad CEMEX cenu, na VŠECHNY materiály stejně
+
+// Základna Honzy – Vrchlabí (GPS)
+const VRCHLABI_LAT = 50.6252;
+const VRCHLABI_LON = 15.6095;
+
+// Dopravné Honzy – paušál nad 50 km od Vrchlabí (silniční vzdálenost)
+const DOPRAVNE_ZONY = [
+  { km_od: 50,  km_do: 70,  cena: 500  },
+  { km_od: 70,  km_do: 100, cena: 1000 },
+  { km_od: 100, km_do: 999, cena: 1500 },
+];
+
+function spocitejDopravneHonzy(stavbaLat, stavbaLon) {
+  if (!stavbaLat || !stavbaLon) return null;
+  const vzdVzdusna  = haversine(stavbaLat, stavbaLon, VRCHLABI_LAT, VRCHLABI_LON);
+  const vzdJednosmerne = vzdVzdusna * 1.3;
+  const vzdTamZpet  = Math.round(vzdJednosmerne * 2); // celková trasa pro zóny
+  for (const z of DOPRAVNE_ZONY) {
+    if (vzdTamZpet >= z.km_od && vzdTamZpet < z.km_do) {
+      return {
+        cena: z.cena,
+        zona: z.km_od + '–' + (z.km_do === 999 ? 'více' : z.km_do) + ' km tam a zpět',
+        km: Math.round(vzdJednosmerne) // jednosměrná vzdálenost pro info v popisku
+      };
+    }
+  }
+  return null; // do 50 km celkové trasy – zdarma
+}
+
+const CEMEX_MATERIALY = [
+  { id:'anhylevel20', name:'AnhyLevel 20', sub:'CA-C20-F4', cena:4000, mat:'MAT_ANHYLEVEL' },
+  { id:'anhylevel25', name:'AnhyLevel 25', sub:'CA-C25-F5', cena:4100, mat:'MAT_ANHYLEVEL' },
+  { id:'anhylevel30', name:'AnhyLevel 30', sub:'CA-C30-F6', cena:4210, mat:'MAT_ANHYLEVEL' },
+  { id:'anhylevel_heat', name:'AnhyLevel Heat', sub:'CA-C35-F7', cena:6120, mat:'MAT_ANHYLEVEL' },
+  { id:'anhylevel_extra', name:'AnhyLevel Extranivel', sub:'CA-C40-F8-B1,5', cena:8400, mat:'MAT_ANHYLEVEL' },
+  { id:'cemlevel8_20', name:'CemLevel 8-20', sub:'CT-C20-F4', cena:4370, mat:'MAT_CEMLEVEL' },
+  { id:'cemlevel4_20', name:'CemLevel 4-20', sub:'CT-C20-F4', cena:4570, mat:'MAT_CEMLEVEL' },
+  { id:'cemlevel8_25', name:'CemLevel 8-25', sub:'CT-C25-F5', cena:4480, mat:'MAT_CEMLEVEL' },
+  { id:'cemlevel4_25', name:'CemLevel 4-25', sub:'CT-C25-F5', cena:4680, mat:'MAT_CEMLEVEL' },
+  { id:'cemlevel8_30', name:'CemLevel 8-30', sub:'CT-C30-F6', cena:4630, mat:'MAT_CEMLEVEL' },
+  { id:'cemlevel4_30', name:'CemLevel 4-30', sub:'CT-C30-F6', cena:4770, mat:'MAT_CEMLEVEL' },
+  { id:'beton_standard', name:'Transportbeton C20/25', sub:'XC2 – standard', cena:2650, mat:'MAT_BETON_STANDARD' },
+  { id:'cm20', name:'Cementová mazanina CM20', sub:'konzistence S2', cena:3200, mat:'MAT_CM' },
+];
+
+// Příplatky
+const CEMEX_PRIPLATKY = [
+  { id:'enviro', label:'Environmentální příplatek', cena:10, active:true, perM3:true },
+  { id:'kamenivo16', label:'Kamenivo do 16 mm', cena:30, active:false, perM3:true },
+  { id:'kamenivo8', label:'Kamenivo do 8 mm', cena:100, active:false, perM3:true },
+  { id:'zimni', label:'Zimní opatření (15.11–15.3.)', cena:110, active:false, perM3:true },
+  { id:'prostoje', label:'Prostoje při vykládce (každých 15 min.)', cena:250, active:false, perM3:false },
+];
+
+// ===== STATE =====
+let stavbaLat = null, stavbaLon = null;
+let pobockySerazene = [];
+let selectedPobockaId = null;
+let selectedMatId = 'anhylevel30';
+let stateTopeni = true, stateFolie = true, stateMirelon = true, statePumpa = 'male';
+let stateDph = 12;
+let statePdp = false;
+let rucniKmHodnota = null;
+let stateIzolace = false;
+let typIzolace = 'EPS_100';
+
+// Ceny izolace z DEK cache (načítají se při startu z Apps Script Web App)
+// Fallback hodnoty pro případ nedostupnosti API
+let IZOLACE_CENY = {
+  EPS_100: 2.40,
+  EPS_150: 2.86,
+  EPS_200: 3.40,
+  XPS_300: 3.72,
+  RIGIFLOOR_4000: 1.32,
+};
+
+// URL Apps Script Web App endpointu – vyplň po nasazení
+const IZOLACE_API_URL = 'https://script.google.com/macros/s/AKfycbxAYhyIsN6cfxUc90FLiTFYR_n90igB9iYlnhAEaid6KQqmIbj8qUAj2OaNLrfPxVwjbg/exec';
+
+// Při načtení stránky si stáhni aktuální ceny z cache
+(function nactiCenyIzolace() {
+  if (!IZOLACE_API_URL || IZOLACE_API_URL.includes('NAHRADIT')) return;
+  fetch(IZOLACE_API_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.EPS_100) IZOLACE_CENY.EPS_100 = data.EPS_100;
+      if (data.EPS_150) IZOLACE_CENY.EPS_150 = data.EPS_150;
+      if (data.XPS_300) IZOLACE_CENY.XPS_300 = data.XPS_300;
+      aktualizujHintIzolace();
+      calc();
+    })
+    .catch(function() {
+      console.log('Ceny izolace: používám fallback hodnoty (API nedostupné)');
+    });
+})();
+
+// ===== INIT =====
+function init() {
+  renderMatGrid();
+  renderPriplatky();
+  renderCenikEdits();
+  calc();
+}
+
+// ===== GEOCODING přes nominatim (OpenStreetMap, zdarma) =====
+async function geocodeAdresa() {
+  const adresa = document.getElementById('adresa').value.trim();
+  if (!adresa) return;
+  const btn = document.getElementById('geo-btn');
+  const hint = document.getElementById('hint-geo');
+  btn.innerHTML = '<span class="spinner-sm"></span>';
+  btn.classList.add('loading');
+  hint.textContent = '';
+  hint.className = 'hint';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(adresa + ', Česká republika')}&format=json&limit=1&countrycodes=cz`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'cs' } });
+    const data = await resp.json();
+    if (!data.length) throw new Error('Adresa nenalezena');
+    stavbaLat = parseFloat(data[0].lat);
+    stavbaLon = parseFloat(data[0].lon);
+    hint.className = 'hint ok';
+    hint.textContent = '✓ ' + data[0].display_name.split(',').slice(0,3).join(',');
+    renderPobocky();
+    calc();
+  } catch(e) {
+    hint.className = 'hint err';
+    hint.textContent = '✗ Adresu se nepodařilo najít. Zkus přesnější zadání.';
+  }
+  btn.innerHTML = 'Najít';
+  btn.classList.remove('loading');
+}
+
+// ===== HAVERSINE =====
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ===== RENDER POBOČKY =====
+function renderPobocky() {
+  if (stavbaLat === null) return;
+  const matFilter = document.getElementById('mat-filter').value;
+
+  pobockySerazene = POBOCKY.map(p => {
+    const dist = haversine(stavbaLat, stavbaLon, p.lat, p.lon);
+    const potvrzen = p.confirmed.includes(matFilter);
+    return { ...p, dist, potvrzen };
+  })
+  .sort((a,b) => {
+    if (a.potvrzen !== b.potvrzen) return a.potvrzen ? -1 : 1;
+    return a.dist - b.dist;
+  })
+  .slice(0, 6);
+
+  const el = document.getElementById('pobocky-list');
+  if (!pobockySerazene.length) { el.innerHTML = '<div class="no-pobocka">Žádné pobočky</div>'; return; }
+
+  el.innerHTML = '';
+  document.getElementById('rucni-km-card').style.display = 'block';
+  pobockySerazene.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'pobocka-item' + (p.potvrzen ? '' : ' overit') + (selectedPobockaId === p.id ? ' selected' : '');
+    div.onclick = () => selectPobocka(p.id);
+    div.innerHTML = `
+      <div class="pobocka-top">
+        <div class="pobocka-name">${p.name}</div>
+        <div class="pobocka-dist">~${Math.round(p.dist)} km</div>
+      </div>
+      <div class="pobocka-addr">${p.addr}</div>
+      <span class="pobocka-tag ${p.potvrzen ? 'tag-ok' : 'tag-overit'}">${p.potvrzen ? '✓ Potvrzeno' : '⚠ Ověřit'}</span>
+      ${p.phone ? `<div class="pobocka-phone">${p.phone}</div>` : ''}
+    `;
+    el.appendChild(div);
+  });
+
+  // Autoselect nejbližší potvrzené
+  if (!selectedPobockaId || !pobockySerazene.find(p => p.id === selectedPobockaId)) {
+    const best = pobockySerazene[0];
+    if (best) selectPobocka(best.id);
+  }
+}
+
+function selectPobocka(id) {
+  selectedPobockaId = id;
+  document.querySelectorAll('.pobocka-item').forEach((el, i) => {
+    el.classList.toggle('selected', pobockySerazene[i]?.id === id);
+  });
+  updateDoprava();
+  calc();
+}
+
+function updateDoprava() {
+  const box = document.getElementById('doprava-info-box');
+  if (!selectedPobockaId || stavbaLat === null) { box.style.display = 'none'; return; }
+  const p = pobockySerazene.find(x => x.id === selectedPobockaId);
+  if (!p) { box.style.display = 'none'; return; }
+
+  const km = Math.round(p.dist);
+  const sazbaObj = getSazba(km);
+  box.style.display = 'block';
+  document.getElementById('di-km').textContent = km + ' km (vzdušná čára, 1 cesta)';
+  document.getElementById('di-pasmo').textContent = sazbaObj ? 'pásmo do ' + sazbaObj.pasmo + ' km (tam a zpět)' : '> 100 km tam a zpět';
+  document.getElementById('di-sazba').textContent = sazbaObj ? sazbaObj.sazba + ' Kč/m³' : 'Ověřit';
+}
+
+function getSazba(kmVzdusna) {
+  // Pokud je nastavena ruční hodnota (tam a zpět), použij ji přímo
+  const kmTamZpet = rucniKmHodnota !== null
+    ? Math.round(rucniKmHodnota)
+    : Math.round(kmVzdusna * 1.3 * 2);
+  for (const p of CEMEX_DOPRAVA) {
+    if (kmTamZpet <= p.km_max) return p;
+  }
+  return CEMEX_DOPRAVA[CEMEX_DOPRAVA.length - 1];
+}
+
+// ===== RENDER MATERIÁL =====
+function renderMatGrid() {
+  const matFilter = document.getElementById('mat-filter')?.value || 'MAT_ANHYLEVEL';
+  const grid = document.getElementById('mat-grid');
+  grid.innerHTML = '';
+  const filtered = CEMEX_MATERIALY.filter(m => m.mat === matFilter);
+  filtered.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'mat-item' + (selectedMatId === m.id ? ' selected' : '');
+    div.onclick = () => { selectedMatId = m.id; renderMatGrid(); calc(); };
+    const cena = getMatCena(m.id);
+    div.innerHTML = `<div class="mat-name">${m.name}</div><div class="mat-sub">${m.sub}</div><div class="mat-price">${cena.toLocaleString('cs-CZ')} Kč/m³</div>`;
+    grid.appendChild(div);
+  });
+  // Pokud vybraný materiál není v aktuálním filtru, vyber první
+  if (!filtered.find(m => m.id === selectedMatId) && filtered.length) {
+    selectedMatId = filtered[0].id;
+    renderMatGrid();
+  }
+}
+
+function getMatCena(id) {
+  const inp = document.getElementById('cena-mat-' + id);
+  if (inp) return parseFloat(inp.value) || 0; // ručně upravená cena - Honza zadává finální částku sám
+  const m = CEMEX_MATERIALY.find(x => x.id === id);
+  return m ? m.cena + MARZE_MATERIAL_M3 : 0; // výchozí CEMEX cena + Honzova přirážka
+}
+
+// ===== RENDER PŘÍPLATKY =====
+function renderPriplatky() {
+  const el = document.getElementById('priplatky-list');
+  el.innerHTML = '';
+  document.getElementById('rucni-km-card').style.display = 'block';
+  CEMEX_PRIPLATKY.forEach(pp => {
+    const row = document.createElement('div');
+    row.className = 'priplatek-row';
+    row.innerHTML = `
+      <span class="pp-label">${pp.label} <span style="color:var(--accent);font-family:'DM Mono',monospace">${pp.cena} Kč${pp.perM3 ? '/m³' : ''}</span></span>
+      <div class="pp-toggle">
+        <button class="pp-btn${!pp.active ? ' active' : ''}" onclick="setPriplatek('${pp.id}', false)">Ne</button>
+        <button class="pp-btn${pp.active ? ' active' : ''}" onclick="setPriplatek('${pp.id}', true)">Ano</button>
+      </div>`;
+    el.appendChild(row);
+  });
+}
+
+function setPriplatek(id, val) {
+  const pp = CEMEX_PRIPLATKY.find(x => x.id === id);
+  if (pp) { pp.active = val; renderPriplatky(); calc(); }
+}
+
+// ===== CENÍK EDITORY =====
+function renderCenikEdits() {
+  // materiály
+  const matEl = document.getElementById('cemex-mat-edit');
+  matEl.innerHTML = '<table class="ct"><tr><th>Materiál</th><th>Kč/m³</th></tr>' +
+    CEMEX_MATERIALY.map(m => `<tr><td>${m.name} <span style="color:var(--text2);font-size:10px">${m.sub}</span></td><td><input type="number" id="cena-mat-${m.id}" value="${m.cena}" oninput="renderMatGrid();calc()"></td></tr>`).join('') +
+    '</table>';
+
+  // příplatky
+  const ppEl = document.getElementById('cemex-priplatky-edit');
+  ppEl.innerHTML = '<table class="ct"><tr><th>Příplatek</th><th>Kč</th></tr>' +
+    CEMEX_PRIPLATKY.map(pp => `<tr><td>${pp.label}</td><td><input type="number" id="cena-pp-${pp.id}" value="${pp.cena}" oninput="syncPriplatek('${pp.id}')"></td></tr>`).join('') +
+    '</table>';
+
+  // doprava - jen info
+  const dopEl = document.getElementById('cemex-doprava-edit');
+  dopEl.innerHTML = '<table class="ct"><tr><th>Pásmo (km, 1 cesta)</th><th>Kč/m³ bez DPH</th></tr>' +
+    CEMEX_DOPRAVA.map(d => `<tr><td>do ${d.pasmo} km</td><td style="font-family:'DM Mono',monospace;color:var(--accent)">${d.sazba}</td></tr>`).join('') +
+    '</table><p style="font-size:10px;color:var(--text2);margin-top:8px">Sazba dle skutečně přepraveného množství, min. 5 m³. Prostoje nad 30 min: 250 Kč/15 min (do 90 min), 500 Kč/15 min (nad 90 min).</p>';
+}
+
+function syncPriplatek(id) {
+  const el = document.getElementById('cena-pp-' + id);
+  const pp = CEMEX_PRIPLATKY.find(x => x.id === id);
+  if (pp && el) { pp.cena = parseFloat(el.value) || 0; renderPriplatky(); calc(); }
+}
+
+// ===== HLAVNÍ VÝPOČET =====
+function calc() {
+  const plocha = fVal('plocha');
+  const tloustka = fVal('tloustka') / 1000;
+  const koefTop = stateTopeni ? fVal('c-koef-top') : 1;
+  const koefZtrata = fVal('c-koef-ztrata');
+  const maxMix = fVal('c-max-mix');
+  const minMix = fVal('c-min-mix');
+
+  // objem
+  const objemCist = plocha * tloustka;
+  const objem = objemCist * koefTop * koefZtrata;
+
+  // mixy – CEMEX: min. fakturace dopravy 5 m³, materiál se účtuje skutečně spotřebovaný
+  const pocetMixu = Math.ceil(objem / maxMix);
+  const objemDoprava = Math.max(objem, minMix); // min. fakturovaný objem JEN pro dopravu
+
+  document.getElementById('r-objem').textContent = objem.toFixed(2) + ' m³';
+
+  // materiál – skutečně spotřebovaný objem
+  const matCena = getMatCena(selectedMatId);
+  const cenaMaterialu = objem * matCena;
+
+  // doprava CEMEX – min. fakturace 5 m³ (auto jede stejně, ať veze méně)
+  let cenaDopravy = 0, dopravniInfo = '—';
+  if (selectedPobockaId && stavbaLat !== null) {
+    const pob = pobockySerazene.find(x => x.id === selectedPobockaId);
+    if (pob) {
+      const sazbaObj = getSazba(Math.round(pob.dist));
+      if (sazbaObj) {
+        cenaDopravy = objemDoprava * sazbaObj.sazba;
+        dopravniInfo = `pásmo do ${sazbaObj.pasmo} km tam a zpět, ${sazbaObj.sazba} Kč/m³`;
+      }
+    }
+  }
+
+  // příplatky – vlastnost materiálu, počítá se ze skutečného objemu
+  let cenaPriplatky = 0;
+  const ppRadky = [];
+  CEMEX_PRIPLATKY.forEach(pp => {
+    if (!pp.active) return;
+    const cena = pp.perM3 ? objem * pp.cena : pp.cena;
+    cenaPriplatky += cena;
+    ppRadky.push([pp.label, cena]);
+  });
+
+  // pumpa – šneková pouze na anhydrit, doprava pump zdarma
+  const pk = statePumpa === 'male' ? 'male' : 'velke';
+  const jeAnhydrit = selectedMatId && selectedMatId.indexOf('anhylevel') === 0;
+  const pMix1 = fVal('c-pumpa-' + pk + '-m1');
+  const pMixN = fVal('c-pumpa-' + pk + '-mn');
+  const cenaPumpa = pMix1 + Math.max(0, pocetMixu - 1) * pMixN;
+  const hintPumpa = document.getElementById('hint-pumpa-warn');
+  if (hintPumpa) {
+    hintPumpa.textContent = (statePumpa === 'male' && !jeAnhydrit)
+      ? '⚠ Šnekové čerpadlo je pouze na AnhyLevel (anhydrit)!'
+      : '';
+  }
+
+  // fólie
+  const cenaFolie = stateFolie ? plocha * fVal('c-folie') : 0;
+  // mirelon
+  const cenaMirelon = stateMirelon ? fVal('mirelon-bm') * fVal('c-mirelon') : 0;
+  // práce – degresivní sazba podle plochy
+  let sazbaPrace;
+  if (plocha <= 50) sazbaPrace = fVal('c-prace-do50');
+  else if (plocha <= 100) sazbaPrace = fVal('c-prace-do100');
+  else sazbaPrace = fVal('c-prace-nad100');
+  const cenaPrace = plocha * sazbaPrace;
+
+  // Dopravné Honzy (paušál nad 50 km od Vrchlabí)
+  const dopravneH = spocitejDopravneHonzy(stavbaLat, stavbaLon);
+  const cenaDopravneH = dopravneH ? dopravneH.cena : 0;
+
+  // Izolace – materiál + pokládka
+  const izolMm = stateIzolace ? (parseFloat(document.getElementById('izolace-mm')?.value) || 50) : 0;
+  const izolCenaM2 = IZOLACE_CENY[typIzolace] || 2.40;
+  const cenaIzolMat  = stateIzolace ? Math.round(plocha * izolMm * izolCenaM2) : 0;
+  const cenaIzolPrace = stateIzolace ? Math.round(plocha * fVal('c-izol-prace')) : 0;
+  const nazvy = { EPS_100: 'EPS 100', EPS_150: 'EPS 150', XPS_300: 'XPS 300 kPa' };
+
+  const total = cenaMaterialu + cenaDopravy + cenaPriplatky + cenaPumpa + cenaFolie + cenaMirelon + cenaPrace + cenaDopravneH + cenaIzolMat + cenaIzolPrace;
+  const zaM2 = plocha > 0 ? total / plocha : 0;
+
+  document.getElementById('r-total').textContent = fmt(total);
+  document.getElementById('r-m2').textContent = fmt(zaM2) + '/m²';
+
+  if (statePdp) {
+    document.getElementById('r-dph').textContent = fmt(total) + ' (bez DPH)';
+    document.getElementById('lbl-dph').textContent = 'K fakturaci (přenesená daň. povinnost)';
+  } else {
+    document.getElementById('r-dph').textContent = fmt(total * (1 + stateDph/100));
+    document.getElementById('lbl-dph').textContent = 'Cena s DPH (' + stateDph + ' %)';
+  }
+
+  // rozpis
+  const mat = CEMEX_MATERIALY.find(m => m.id === selectedMatId);
+  const rows = [
+    [`${mat ? mat.name : 'Materiál'} (${objem.toFixed(2)} m³ × ${matCena} Kč)`, cenaMaterialu],
+    cenaDopravy > 0 ? [`Doprava CEMEX (${dopravniInfo})`, cenaDopravy] : null,
+    ...ppRadky.map(r => r),
+    [`${statePumpa === 'male' ? 'Šnekové' : 'Pístové'} čerpadlo (${pocetMixu} mix${pocetMixu > 1 ? 'y' : ''})`, cenaPumpa],
+    stateFolie ? [`Fólie PE (${plocha} m² × ${fVal('c-folie')} Kč)`, cenaFolie] : null,
+    stateMirelon ? [`Mirelon (${fVal('mirelon-bm')} bm × ${fVal('c-mirelon')} Kč)`, cenaMirelon] : null,
+    stateIzolace ? [`${nazvy[typIzolace]} – materiál (${plocha} m² × ${izolMm} mm × ${izolCenaM2} Kč/mm/m²)`, cenaIzolMat] : null,
+    stateIzolace ? [`Pokládka izolace (${plocha} m² × ${fVal('c-izol-prace')} Kč)`, cenaIzolPrace] : null,
+    ['Práce', cenaPrace],
+    dopravneH ? [`Dopravné (stavba ${dopravneH.km} km od Vrchlabí, zóna ${dopravneH.zona})`, cenaDopravneH] : null,
+    null,
+    ['CELKEM bez DPH', total],
+  ];
+
+  const container = document.getElementById('bd-rows');
+  container.innerHTML = '';
+  rows.forEach(row => {
+    if (!row) return;
+    const isTotal = row[0].startsWith('CELKEM');
+    const div = document.createElement('div');
+    div.className = 'bd-row' + (isTotal ? ' total' : '');
+    div.innerHTML = `<span class="d">${row[0]}</span><span class="a">${fmt(row[1])}</span>`;
+    container.appendChild(div);
+  });
+}
+
+// ===== HELPERS =====
+function fVal(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+function fmt(n) { return Math.round(n).toLocaleString('cs-CZ') + ' Kč'; }
+
+function setTopeni(v) {
+  stateTopeni = v;
+  document.getElementById('btn-top-ano').classList.toggle('active', v);
+  document.getElementById('btn-top-ne').classList.toggle('active', !v);
+  calc();
+}
+function setDph(v) {
+  stateDph = v;
+  document.getElementById('btn-dph-12').classList.toggle('active', v === 12);
+  document.getElementById('btn-dph-21').classList.toggle('active', v === 21);
+  calc();
+}
+function setPdp(v) {
+  statePdp = v;
+  document.getElementById('btn-pdp-ano').classList.toggle('active', v);
+  document.getElementById('btn-pdp-ne').classList.toggle('active', !v);
+  calc();
+}
+
+function setIzolace(v) {
+  stateIzolace = v;
+  document.getElementById('btn-izol-ne').classList.toggle('active', !v);
+  document.getElementById('btn-izol-ano').classList.toggle('active', v);
+  document.getElementById('izol-field').style.display = v ? 'block' : 'none';
+  var arrow = document.getElementById('izol-arrow');
+  if (arrow) arrow.style.transform = v ? 'rotate(180deg)' : 'rotate(0deg)';
+  aktualizujHintIzolace();
+  calc();
+}
+
+function setTypIzolace(typ) {
+  typIzolace = typ;
+  aktualizujHintIzolace();
+  calc();
+}
+
+function aktualizujHintIzolace() {
+  var hint = document.getElementById('hint-izol-cena');
+  if (!hint) return;
+  var cena = IZOLACE_CENY[typIzolace] || 0;
+  var nazvy = {
+    EPS_100: 'EPS 100',
+    EPS_150: 'EPS 150',
+    EPS_200: 'EPS 200',
+    XPS_300: 'XPS 300 kPa',
+    RIGIFLOOR_4000: 'Rigifloor 4000 (kročejový útlum)',
+  };
+  if (cena > 0) {
+    hint.textContent = nazvy[typIzolace] + ': ' + cena.toFixed(2) + ' Kč/mm/m² bez DPH (DEK cena)';
+  } else {
+    hint.textContent = nazvy[typIzolace] + ': cena se načítá...';
+  }
+}
+function pouzijRucniKm() {
+  var val = parseFloat(document.getElementById('rucni-km').value);
+  rucniKmHodnota = (!isNaN(val) && val > 0) ? val : null;
+  calc();
+}
+function zrusitRucniKm() {
+  rucniKmHodnota = null;
+  document.getElementById('rucni-km').value = '';
+  calc();
+}
+function setFolie(v) {
+  stateFolie = v;
+  document.getElementById('btn-folie-ano').classList.toggle('active', v);
+  document.getElementById('btn-folie-ne').classList.toggle('active', !v);
+  calc();
+}
+function setMirelon(v) {
+  stateMirelon = v;
+  document.getElementById('btn-mir-ano').classList.toggle('active', v);
+  document.getElementById('btn-mir-ne').classList.toggle('active', !v);
+  document.getElementById('mir-field').style.display = v ? 'block' : 'none';
+  calc();
+}
+function setPumpa(t) {
+  statePumpa = t;
+  document.getElementById('btn-pumpa-male').classList.toggle('active', t === 'male');
+  document.getElementById('btn-pumpa-velke').classList.toggle('active', t === 'velke');
+  // Synchronizace s druhým listem
+  var m2 = document.getElementById('btn-pumpa-male-2');
+  var v2 = document.getElementById('btn-pumpa-velke-2');
+  if (m2) m2.classList.toggle('active', t === 'male');
+  if (v2) v2.classList.toggle('active', t === 'velke');
+  calc();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const idx = ['kalkulator','pumpa','cenik'].indexOf(name);
+  document.querySelectorAll('.tab')[idx]?.classList.add('active');
+  if (name === 'kalkulator') { renderMatGrid(); calc(); }
+}
+
+document.getElementById('mat-filter').addEventListener('change', () => { renderMatGrid(); renderPobocky(); calc(); });
+
+// přidej pevné ceny pro fólii a mirelon (nejsou v tab ceník)
+document.addEventListener('DOMContentLoaded', () => {});
+
+function exportText() {
+  const mat = CEMEX_MATERIALY.find(m => m.id === selectedMatId);
+  const pob = pobockySerazene.find(x => x.id === selectedPobockaId);
+  const rows = [...document.querySelectorAll('.bd-row')].map(r =>
+    `  ${r.querySelector('.d').textContent.padEnd(55)} ${r.querySelector('.a').textContent}`
+  ).join('\n');
+  const text = `CENOVÁ NABÍDKA – LITÁ PODLAHA (CEMEX)
+==========================================
+Plocha: ${fVal('plocha')} m²  |  Tloušťka: ${fVal('tloustka')} mm
+Materiál: ${mat ? mat.name + ' (' + mat.sub + ')' : '—'}
+Pobočka CEMEX: ${pob ? pob.name : '—'}
+Podlahové topení: ${stateTopeni ? 'ano' : 'ne'}
+
+ROZPIS:
+${rows}
+
+Cena bez DPH:   ${document.getElementById('r-total').textContent}
+${statePdp ? 'K fakturaci (přenesená daň. povinnost): ' : 'Cena s DPH ' + stateDph + '%: '}${document.getElementById('r-dph').textContent}
+Cena za m²:     ${document.getElementById('r-m2').textContent}
+
+Doprava dle CEMEX ceníku. Ceny bez záruky – ověřit u dispečinku.`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-export');
+    btn.textContent = '✓ Zkopírováno!';
+    setTimeout(() => btn.textContent = '📋 Zkopírovat nabídku', 2000);
+  });
+}
+
+// Dynamické inputy pro fólii a mirelon (nebyly v tab ceník)
+const style = document.createElement('style');
+document.head.appendChild(style);
+
+// Přidat hidden inputy pro ceny fólie a mirelonu
+const hi1 = document.createElement('input'); hi1.type='number'; hi1.id='c-folie'; hi1.value=20; hi1.style.display='none'; document.body.appendChild(hi1);
+const hi2 = document.createElement('input'); hi2.type='number'; hi2.id='c-mirelon'; hi2.value=20; hi2.style.display='none'; document.body.appendChild(hi2);
+
+init();
+
+
+// Přepínač rozpisu
+var stateRozpis = false;
+function setRozpis(val) {
+  stateRozpis = val;
+  document.getElementById('btn-rozpis-ano').classList.toggle('active', val);
+  document.getElementById('btn-rozpis-ne').classList.toggle('active', !val);
+}
+
+function tiskNabidky() {
+  // Vygeneruje nabídku v novém okně a rovnou otevře dialog tisku/uložení PDF
+  vytvorHtmlNabidku(true); // true = autoprint
+}
+
+function vytvorHtmlNabidku(autoprint) {
+  var plocha   = fVal('plocha');
+  var tloustka = fVal('tloustka');
+  var dnes     = new Date().toLocaleDateString('cs-CZ');
+  var now      = new Date();
+  var cislo    = 'NAB-' +
+    now.getFullYear() +
+    String(now.getMonth()+1).padStart(2,'0') +
+    String(now.getDate()).padStart(2,'0') + '-' +
+    String(now.getHours()).padStart(2,'0') +
+    String(now.getMinutes()).padStart(2,'0');
+
+  var mat      = CEMEX_MATERIALY.find(function(m){ return m.id === selectedMatId; });
+  var matNazev = mat ? mat.name : '–';
+  var matCena  = getMatCena(selectedMatId);
+
+  var koefTop    = stateTopeni ? fVal('c-koef-top') : 1;
+  var koefZtrata = fVal('c-koef-ztrata');
+  var objem        = Math.round((plocha * (tloustka/1000) * koefTop * koefZtrata) * 100) / 100;
+  var pocetMixu    = Math.ceil(objem / fVal('c-max-mix'));
+  var objemDoprava = Math.max(objem, fVal('c-min-mix')); // min. fakturace JEN dopravy
+
+  // Doprava
+  var cenaDopravy = 0, dopravniInfo = '–';
+  var _selPob = (typeof selectedPobockaId !== 'undefined') ? selectedPobockaId : null;
+  var _pobSeraz = (typeof pobockySerazene !== 'undefined') ? pobockySerazene : [];
+  var _stavbaLat = (typeof stavbaLat !== 'undefined') ? stavbaLat : null;
+  if (_selPob && _stavbaLat !== null) {
+    var pob = _pobSeraz.find(function(x){ return x.id === _selPob; });
+    if (pob) {
+      var sazbaObj = getSazba(Math.round(pob.dist));
+      if (sazbaObj) {
+        cenaDopravy  = Math.round(objemDoprava * sazbaObj.sazba);
+        dopravniInfo = 'pásmo do ' + sazbaObj.pasmo + ' km tam a zpět, ' + sazbaObj.sazba + ' Kč/m³';
+      }
+    }
+  }
+
+  // Pumpa
+  var pk       = statePumpa === 'male' ? 'male' : 'velke';
+  var pMix1    = fVal('c-pumpa-' + pk + '-m1');
+  var pMixN    = fVal('c-pumpa-' + pk + '-mn');
+  var cenaPumpa   = Math.round(pMix1 + Math.max(0, pocetMixu - 1) * pMixN);
+  var pumpaNazev  = statePumpa === 'male' ? 'Šnekové čerpadlo' : 'Pístové čerpadlo';
+
+  // Práce
+  var sazbaPrace;
+  if (plocha <= 50)       sazbaPrace = fVal('c-prace-do50');
+  else if (plocha <= 100) sazbaPrace = fVal('c-prace-do100');
+  else                    sazbaPrace = fVal('c-prace-nad100');
+  var cenaPrace = Math.round(plocha * sazbaPrace);
+
+  var cenaFolie   = stateFolie   ? Math.round(plocha * fVal('c-folie'))              : 0;
+  var cenaMirelon = stateMirelon ? Math.round(fVal('mirelon-bm') * fVal('c-mirelon')): 0;
+  var _selIzol = (typeof selectedIzolaceId !== 'undefined') ? selectedIzolaceId : null;
+  var _selTl   = (typeof selectedTloustkaId !== 'undefined') ? selectedTloustkaId : null;
+  var cenaIzolace = _selIzol ? Math.round(plocha * fVal('c-izol-prace')) : 0;
+
+  // Příplatky – vlastnost materiálu, počítá se ze skutečně spotřebovaného objemu
+  var cenaPriplatky = 0;
+  var ppItems = [];
+  CEMEX_PRIPLATKY.forEach(function(pp) {
+    if (!pp.active) return;
+    var c = Math.round(pp.perM3 ? objem * pp.cena : pp.cena);
+    cenaPriplatky += c;
+    ppItems.push({ polozka: pp.label, castka: c });
+  });
+
+  // Izolace – nový systém s DEK cenami
+  var cenaIzolMat = 0, cenaIzolace = 0, izolLabel = '';
+  if (stateIzolace) {
+    var izolMmVal = parseFloat(document.getElementById('izolace-mm')?.value) || 50;
+    var izolCenaVal = IZOLACE_CENY[typIzolace] || 2.40;
+    var nazvyIzol = { EPS_100: 'EPS 100', EPS_150: 'EPS 150', EPS_200: 'EPS 200', XPS_300: 'XPS 300 kPa', RIGIFLOOR_4000: 'Rigifloor 4000' };
+    cenaIzolMat   = Math.round(plocha * izolMmVal * izolCenaVal);
+    cenaIzolace   = Math.round(plocha * fVal('c-izol-prace'));
+    izolLabel     = nazvyIzol[typIzolace] + ' ' + izolMmVal + ' mm';
+  }
+
+  var total = Math.round(objem * matCena + cenaDopravy + cenaPriplatky + cenaPumpa + cenaPrace + cenaFolie + cenaMirelon + cenaIzolace + cenaIzolMat);
+
+  // Dopravné Honzy (paušál nad 50 km od Vrchlabí)
+  var dopravneH = spocitejDopravneHonzy(stavbaLat, stavbaLon);
+  if (dopravneH) {
+    total += dopravneH.cena;
+  }
+
+  var totalDPH = statePdp ? total : Math.round(total * (1 + stateDph/100));
+  var zaM2     = Math.round(total / plocha);
+
+  // Rozpis řádky
+  var radky = [];
+  radky.push({ p: matNazev + ' · ' + objem + ' m³ × ' + matCena + ' Kč/m³',       c: Math.round(objem * matCena) });
+  if (cenaDopravy > 0) {
+    var dopravaPopis = (objemDoprava > objem)
+      ? dopravniInfo + ' (fakturováno min. ' + objemDoprava + ' m³)'
+      : dopravniInfo;
+    radky.push({ p: 'Doprava CEMEX · ' + dopravaPopis, c: cenaDopravy });
+  }
+  ppItems.forEach(function(x){ radky.push({ p: x.polozka, c: x.castka }); });
+  radky.push({ p: pumpaNazev + ' · ' + pocetMixu + (pocetMixu > 1 ? ' mixy' : ' mix'), c: cenaPumpa });
+  radky.push({ p: 'Práce', c: cenaPrace });
+  if (cenaIzolMat > 0)  radky.push({ p: izolLabel + ' material', c: cenaIzolMat });
+  if (cenaIzolace > 0)  radky.push({ p: 'Pokládka izolace · ' + plocha + ' m² × ' + fVal('c-izol-prace') + ' Kč', c: cenaIzolace });
+  if (cenaFolie   > 0)  radky.push({ p: 'Fólie PE · ' + plocha + ' m² × ' + fVal('c-folie') + ' Kč', c: cenaFolie });
+  if (cenaMirelon > 0)  radky.push({ p: 'Mirelon · ' + fVal('mirelon-bm') + ' bm × ' + fVal('c-mirelon') + ' Kč', c: cenaMirelon });
+  if (dopravneH)        radky.push({ p: 'Dopravné (stavba ' + dopravneH.km + ' km od Vrchlabí, zóna ' + dopravneH.zona + ')', c: dopravneH.cena });
+
+  var radkyHtml = stateRozpis ? radky.map(function(r){
+    return '<tr><td>' + r.p + '</td><td>' + r.c.toLocaleString('cs-CZ') + ' Kč</td></tr>';
+  }).join('') : '';
+
+  var rozpísSecce = stateRozpis
+    ? '<div class="sekce">Rozpis položek</div><table><thead><tr><th>Položka</th><th style="text-align:right">Cena bez DPH</th></tr></thead><tbody>' + radkyHtml + '</tbody></table>'
+    : '';
+
+  var adresaStavby = (document.getElementById('adresa') && document.getElementById('adresa').value) || '–';
+  var zakJmeno   = (document.getElementById('zak-jmeno')   && document.getElementById('zak-jmeno').value)   || '–';
+  var zakEmail   = (document.getElementById('zak-email')   && document.getElementById('zak-email').value)   || '';
+  var zakTelefon = (document.getElementById('zak-telefon') && document.getElementById('zak-telefon').value) || '';
+  var zakIco     = (document.getElementById('zak-ico')      && document.getElementById('zak-ico').value)      || '';
+
+  var css = [
+    '* { box-sizing: border-box; margin: 0; padding: 0; }',
+    'body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }',
+    '.page { width: 794px; min-height: 1123px; background: #fff; margin: 0 auto; display: flex; flex-direction: column; }',
+    '.header { background: #1e2d4a; padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }',
+    '.brand-name { font-size: 26px; font-weight: 700; letter-spacing: 2px; color: #fff; line-height: 1; }',
+    '.brand-name span { color: #f5a623; }',
+    '.brand-sub { font-size: 10px; color: rgba(255,255,255,0.55); letter-spacing: 1px; margin-top: 4px; }',
+    '.header-right { text-align: right; }',
+    '.header-right p { font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.7; }',
+    '.accent-bar { height: 5px; background: #f5a623; }',
+    '.meta { background: #f7f8fa; border-bottom: 1px solid #e8eaed; padding: 12px 40px; display: flex; justify-content: space-between; align-items: center; }',
+    '.meta-cislo { font-size: 13px; color: #1e2d4a; font-weight: 700; }',
+    '.meta-datum { font-size: 12px; color: #666; }',
+    '.platnost { background: #fff3d6; color: #9a6200; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #f5a623; }',
+    '.body { padding: 28px 40px; flex: 1; }',
+    '.dvoupanel { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }',
+    '.panel { border: 1px solid #e8eaed; border-radius: 8px; padding: 14px 16px; }',
+    '.panel-title { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #f5a623; margin-bottom: 8px; }',
+    '.panel p { font-size: 13px; color: #1e2d4a; line-height: 1.6; }',
+    '.params { display: grid; grid-template-columns: repeat(4,1fr); gap: 9px; margin-bottom: 22px; }',
+    '.param { background: #1e2d4a; border-radius: 8px; padding: 11px 12px; text-align: center; }',
+    '.param .val { font-size: 17px; font-weight: 700; color: #f5a623; line-height: 1.2; }',
+    '.param .lbl { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 3px; }',
+    '.sekce { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #1e2d4a; margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }',
+    '.sekce::after { content: ""; flex: 1; height: 1px; background: #e8eaed; }',
+    'table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12.5px; }',
+    'thead tr { background: #1e2d4a; color: #fff; }',
+    'thead th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; }',
+    'thead th:last-child { text-align: right; }',
+    'tbody tr { border-bottom: 1px solid #f0f2f5; }',
+    'tbody tr:nth-child(even) { background: #f7f8fa; }',
+    'tbody td { padding: 8px 12px; color: #1e2d4a; }',
+    'tbody td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }',
+    '.rekap { margin-left: auto; width: 290px; margin-bottom: 24px; }',
+    '.rekap-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; color: #444; }',
+    '.rekap-row .amt { font-weight: 600; color: #1e2d4a; }',
+    '.rekap-total { background: #1e2d4a; color: #fff; padding: 10px 14px; border-radius: 8px; margin-top: 6px; font-size: 15px; font-weight: 700; display: flex; justify-content: space-between; }',
+    '.rekap-total .amt { color: #f5a623; }',
+    '.badge-m2 { display: inline-block; background: #f5a623; color: #1e2d4a; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-left: 10px; }',
+    '.podminky { background: #f7f8fa; border: 1px solid #e8eaed; border-radius: 8px; padding: 13px 16px; margin-bottom: 24px; font-size: 12px; color: #555; line-height: 1.8; }',
+    '.podminky strong { color: #1e2d4a; }',
+    '.footer { background: #1e2d4a; padding: 14px 40px; display: flex; align-items: center; justify-content: flex-end; }',
+    '.podpis { font-size: 13px; color: #fff; font-weight: 600; text-align: right; }',
+    '.podpis span { color: #f5a623; }',
+    '.podpis small { display: block; font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 400; margin-top: 2px; }',
+    '@media print {',
+    '  @page { margin: 10mm; size: A4; }',
+    '  body { margin: 0; }',
+    '  .params .param { padding: 6px 8px; }',
+    '  .params .param .val { font-size: 14px; }',
+    '  table td, table th { padding: 4px 6px; font-size: 11px; }',
+    '  .rekap-row { padding: 2px 0; font-size: 11px; }',
+    '  .rekap-total { padding: 5px 8px; font-size: 13px; }',
+    '  .podminky { padding: 8px 12px; font-size: 10px; margin-top: 6px; }',
+    '  .footer { padding: 8px 20px; }',
+    '  .uvod { padding: 8px 12px; font-size: 11px; margin-bottom: 8px; }',
+    '  .sekce { margin: 6px 0 3px; font-size: 9px; }',
+    '  .dvoupanel { margin-bottom: 8px; gap: 8px; }',
+    '  .panel { padding: 8px 10px; }',
+    '  .material-info { padding: 6px 10px; font-size: 10px; }',
+    '}'
+  ].join('\n');
+
+  var html = '<!DOCTYPE html>\n<html lang="cs">\n<head>\n<meta charset="UTF-8">\n' +
+    '<title>SALPO – Cenova nabidka ' + cislo + '</title>\n' +
+    '<style>\n' + css + '\n</style>\n</head>\n<body>\n' +
+    '<div class="page">\n' +
+    '<div class="header">\n' +
+    '  <div><div class="brand-name">SALPO <span>s.r.o.</span></div><div class="brand-sub">ČERPÁNÍ BETONU · LITÍ PODLAH</div></div>\n' +
+    '  <div class="header-right">\n' +
+    '    <p>Regnerova 1106, Upice 542 32</p>\n' +
+    '    <p>ICO: 28850912 · DIC: CZ28850912</p>\n' +
+    '    <p>+420 775 329 556</p>\n' +
+    '    <p>peterka@salpo.cz · www.salpo.cz</p>\n' +
+    '  </div>\n</div>\n' +
+    '<div class="accent-bar"></div>\n' +
+    '<div class="meta">\n' +
+    '  <div class="meta-cislo">CENOVÁ NABÍDKA · ' + cislo + '</div>\n' +
+    '  <div class="meta-datum">Datum: ' + dnes + '</div>\n' +
+    '  <div class="platnost">Platí 30 dní</div>\n' +
+    '</div>\n' +
+    '<div class="body">\n' +
+    '<div class="dvoupanel">\n' +
+    '  <div class="panel"><div class="panel-title">Zákazník</div><p style="font-weight:600;font-size:14px">' + zakJmeno + '</p><p style="font-size:11px;color:#888">' + (zakEmail || '') + (zakTelefon ? ' · ' + zakTelefon : '') + (zakIco ? ' · IČO ' + zakIco : '') + '</p></div>\n' +
+    '  <div class="panel"><div class="panel-title">Adresa stavby</div><p style="font-weight:600;font-size:14px">' + adresaStavby + '</p></div>\n' +
+    '</div>\n' +
+    '<div class="sekce">Parametry zakázky</div>\n' +
+    '<div class="params">\n' +
+    '  <div class="param"><div class="val">' + plocha + ' m2</div><div class="lbl">Plocha</div></div>\n' +
+    '  <div class="param"><div class="val">' + tloustka + ' mm</div><div class="lbl">Tloušťka potěru</div></div>\n' +
+    '  <div class="param"><div class="val">' + objem + ' m3</div><div class="lbl">Objem materiálu</div></div>\n' +
+    '</div>\n' +
+    rozpísSecce +
+    '<div class="rekap">\n' +
+    '  <div class="rekap-row"><span>Celkem bez DPH</span><span class="amt">' + total.toLocaleString('cs-CZ') + ' Kc</span></div>\n' +
+    (statePdp
+      ? '  <div class="rekap-row"><span style="color:#9a6200">Přenesená daňová povinnost</span><span class="amt" style="color:#9a6200">daň odvede zákazník</span></div>\n'
+      : '  <div class="rekap-row"><span>DPH ' + stateDph + ' %</span><span class="amt">' + Math.round(total*stateDph/100).toLocaleString('cs-CZ') + ' Kc</span></div>\n') +
+    '  <div class="rekap-total"><span>' + (statePdp ? 'Celkem k fakturaci (bez DPH)' : 'Celkem s DPH') + '</span><span class="amt">' + totalDPH.toLocaleString('cs-CZ') + ' Kc</span></div>\n' +
+    (function() {
+      var m2Label, m2Val;
+      if (statePdp) {
+        m2Label = 'Cena za m²';
+        m2Val = zaM2.toLocaleString('cs-CZ') + ' Kč/m² bez DPH';
+      } else if (stateDph === 12) {
+        var m2SDph = Math.round(zaM2 * 1.12);
+        m2Label = 'Cena za m²';
+        m2Val = m2SDph.toLocaleString('cs-CZ') + ' Kč/m² s DPH 12 %';
+      } else {
+        var m2SDph21 = Math.round(zaM2 * 1.21);
+        m2Label = 'Cena za m²';
+        m2Val = m2SDph21.toLocaleString('cs-CZ') + ' Kč/m² s DPH 21 %';
+      }
+      return '  <div style="text-align:right;margin-top:8px"><span style="font-size:12px;color:#666">' + m2Label + '</span><span class="badge-m2">' + m2Val + '</span></div>\n';
+    })() +
+    '</div>\n' +
+    (function() {
+      // Dynamická cena za m³ pro dodatek (materiál + doprava)
+      var sazbaDopM3 = (cenaDopravy > 0 && objem > 0) ? Math.round(cenaDopravy / Math.max(objem, fVal('c-min-mix'))) : 0;
+      var cenaNavicM3 = (matCena || 0) + sazbaDopM3;
+      var matNazevLower = (matNazev || '').toLowerCase();
+      var normaText = matNazevLower.indexOf('anhylevel') !== -1
+        ? ' Normová spotřeba materiálu pro ' + matNazev + ' činí 2,75 m³/mm/m².'
+        : '';
+      return '<div class="podminky">\n' +
+        '  <strong>Splatnost:</strong> 30 dní od vystavení faktury. &nbsp;|&nbsp;\n' +
+        '  <strong>Platnost nabídky:</strong> 30 dní od data vystavení.<br>\n' +
+        (statePdp
+          ? '  <strong>Poznámka:</strong> Cena je uvedena bez DPH. Objednatel je dle poskytnutých údajů plátcem DPH – přenesená daňová povinnost dle § 92e zákona o DPH. Daň odvede zákazník.<br>\n'
+          : '') +
+        '  <strong>Dodatek:</strong> V případě vyšší spotřeby materiálu, než bylo uvedeno v nabídce, si zhotovitel vyhrazuje právo naúčtovat rozdíl skutečné spotřeby materiálu.' +
+        normaText +
+        ' Při nerovnosti podkladu nebo vyšší spotřebě bude účtováno ' + cenaNavicM3.toLocaleString('cs-CZ') + ' Kč/m³ spotřebovaného materiálu navíc.\n' +
+        '</div>\n';
+    })() +
+    '</div>\n' +
+    '<div class="footer"><div class="podpis">Jan Peterka <span>/ SALPO s.r.o.</span><small>775 329 556 · peterka@salpo.cz</small></div></div>\n' +
+    '</div>\n</body>\n</html>';
+
+  // Otevřeme nabídku v novém okně – funguje i pro lokální soubory
+  var novyTab = window.open('', '_blank');
+  novyTab.document.write(html);
+  novyTab.document.close();
+  if (autoprint) {
+    novyTab.onload = function() { novyTab.print(); };
+    // Fallback pro prohlížeče kde onload nemusí fungovat
+    setTimeout(function() { try { novyTab.print(); } catch(e) {} }, 800);
+  }
+}
+</script>
+</body>
+</html>
