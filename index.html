@@ -1206,14 +1206,51 @@ function vytvorHtmlNabidku(autoprint) {
   if (cenaIzolace > 0)  radky.push({ p: 'Pokládka izolace · ' + plocha + ' m² × ' + fVal('c-izol-prace') + ' Kč', c: cenaIzolace });
   if (cenaFolie   > 0)  radky.push({ p: 'Fólie PE · ' + plocha + ' m² × ' + fVal('c-folie') + ' Kč', c: cenaFolie });
   if (cenaMirelon > 0)  radky.push({ p: 'Mirelon · ' + fVal('mirelon-bm') + ' bm × ' + fVal('c-mirelon') + ' Kč', c: cenaMirelon });
-  if (dopravneH)        radky.push({ p: 'Dopravné (stavba ' + dopravneH.km + ' km od Vrchlabí, zóna ' + dopravneH.zona + ')', c: dopravneH.cena });
+  if (dopravneH)        radky.push({ p: 'Dopravné', mj: 'kpl', mn: 1, cmj: dopravneH.cena, c: dopravneH.cena });
 
-  var radkyHtml = stateRozpis ? radky.map(function(r){
-    return '<tr><td>' + r.p + '</td><td>' + r.c.toLocaleString('cs-CZ') + ' Kč</td></tr>';
+  var dph_koef   = statePdp ? 0 : stateDph / 100;
+  var dph_label  = statePdp ? '0 % (PDP)' : stateDph + ' %';
+
+  radky = [];
+  radky.push({ p: matNazev, mj: 'm³', mn: objem, cmj: matCena, c: Math.round(objem * matCena) });
+  if (cenaDopravy > 0) {
+    var sazbaDop = objemDoprava > 0 ? Math.round(cenaDopravy / objemDoprava) : 0;
+    radky.push({ p: 'Doprava CEMEX', mj: 'm³', mn: objemDoprava, cmj: sazbaDop, c: cenaDopravy });
+  }
+  ppItems.forEach(function(x){ radky.push({ p: x.polozka, mj: 'kpl', mn: 1, cmj: x.castka, c: x.castka }); });
+  radky.push({ p: pumpaNazev, mj: 'kpl', mn: pocetMixu, cmj: pocetMixu > 0 ? Math.round(cenaPumpa/pocetMixu) : cenaPumpa, c: cenaPumpa });
+  radky.push({ p: 'Práce', mj: 'm²', mn: plocha, cmj: sazbaPrace, c: cenaPrace });
+  if (cenaIzolMat > 0)  radky.push({ p: izolLabel, mj: 'm²', mn: plocha, cmj: Math.round(cenaIzolMat/plocha), c: cenaIzolMat });
+  if (cenaIzolace > 0)  radky.push({ p: 'Pokládka izolace', mj: 'm²', mn: plocha, cmj: fVal('c-izol-prace'), c: cenaIzolace });
+  if (cenaFolie   > 0)  radky.push({ p: 'Fólie PE separační', mj: 'm²', mn: plocha, cmj: fVal('c-folie'), c: cenaFolie });
+  if (cenaMirelon > 0)  radky.push({ p: 'Dilatační pásek mirelon', mj: 'bm', mn: fVal('mirelon-bm'), cmj: fVal('c-mirelon'), c: cenaMirelon });
+  if (dopravneH)        radky.push({ p: 'Dopravné', mj: 'kpl', mn: 1, cmj: dopravneH.cena, c: dopravneH.cena });
+
+  var radkyHtml = stateRozpis ? radky.map(function(r) {
+    var cBez = Math.round(r.c);
+    var cDph = Math.round(cBez * dph_koef);
+    var cS   = cBez + cDph;
+    return '<tr>' +
+      '<td>' + r.p + '</td>' +
+      '<td style="text-align:center">' + (r.mj || '') + '</td>' +
+      '<td style="text-align:right">' + (r.mn !== undefined ? r.mn : '') + '</td>' +
+      '<td style="text-align:right">' + (r.cmj !== undefined ? r.cmj.toLocaleString('cs-CZ') + ' Kč' : '') + '</td>' +
+      '<td style="text-align:right">' + cBez.toLocaleString('cs-CZ') + ' Kč</td>' +
+      '<td style="text-align:center">' + dph_label + '</td>' +
+      '<td style="text-align:right;font-weight:600">' + cS.toLocaleString('cs-CZ') + ' Kč</td>' +
+      '</tr>';
   }).join('') : '';
 
   var rozpísSecce = stateRozpis
-    ? '<div class="sekce">Rozpis položek</div><table><thead><tr><th>Položka</th><th style="text-align:right">Cena bez DPH</th></tr></thead><tbody>' + radkyHtml + '</tbody></table>'
+    ? '<div class="sekce">Rozpis položek</div><table><thead><tr>' +
+      '<th>Položka</th>' +
+      '<th style="text-align:center">MJ</th>' +
+      '<th style="text-align:right">Množství</th>' +
+      '<th style="text-align:right">Cena/MJ</th>' +
+      '<th style="text-align:right">Cena bez DPH</th>' +
+      '<th style="text-align:center">Sazba DPH</th>' +
+      '<th style="text-align:right">Cena s DPH</th>' +
+      '</tr></thead><tbody>' + radkyHtml + '</tbody></table>'
     : '';
 
   var adresaStavby = (document.getElementById('adresa') && document.getElementById('adresa').value) || '–';
@@ -1248,14 +1285,13 @@ function vytvorHtmlNabidku(autoprint) {
     '.param .lbl { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 3px; }',
     '.sekce { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #1e2d4a; margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }',
     '.sekce::after { content: ""; flex: 1; height: 1px; background: #e8eaed; }',
-    'table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12.5px; }',
+    'table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11px; }',
     'thead tr { background: #1e2d4a; color: #fff; }',
-    'thead th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; }',
-    'thead th:last-child { text-align: right; }',
+    'thead th { padding: 6px 8px; text-align: left; font-size: 10px; font-weight: 600; }',
     'tbody tr { border-bottom: 1px solid #f0f2f5; }',
     'tbody tr:nth-child(even) { background: #f7f8fa; }',
-    'tbody td { padding: 8px 12px; color: #1e2d4a; }',
-    'tbody td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }',
+    'tbody td { padding: 6px 8px; color: #1e2d4a; }',
+    'tbody td:first-child { width: 35%; }',
     '.rekap { margin-left: auto; width: 290px; margin-bottom: 24px; }',
     '.rekap-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; color: #444; }',
     '.rekap-row .amt { font-weight: 600; color: #1e2d4a; }',
@@ -1340,22 +1376,17 @@ function vytvorHtmlNabidku(autoprint) {
     })() +
     '</div>\n' +
     (function() {
-      // Dynamická cena za m³ pro dodatek (materiál + doprava)
-      var sazbaDopM3 = (cenaDopravy > 0 && objem > 0) ? Math.round(cenaDopravy / Math.max(objem, fVal('c-min-mix'))) : 0;
+      var sazbaDopM3  = (cenaDopravy > 0 && objem > 0) ? Math.round(cenaDopravy / Math.max(objem, fVal('c-min-mix'))) : 0;
       var cenaNavicM3 = (matCena || 0) + sazbaDopM3;
-      var matNazevLower = (matNazev || '').toLowerCase();
-      var normaText = matNazevLower.indexOf('anhylevel') !== -1
-        ? ' Normová spotřeba materiálu pro ' + matNazev + ' činí 2,75 m³/mm/m².'
-        : '';
       return '<div class="podminky">\n' +
         '  <strong>Splatnost:</strong> 30 dní od vystavení faktury. &nbsp;|&nbsp;\n' +
         '  <strong>Platnost nabídky:</strong> 30 dní od data vystavení.<br>\n' +
         (statePdp
           ? '  <strong>Poznámka:</strong> Cena je uvedena bez DPH. Objednatel je dle poskytnutých údajů plátcem DPH – přenesená daňová povinnost dle § 92e zákona o DPH. Daň odvede zákazník.<br>\n'
           : '') +
-        '  <strong>Dodatek:</strong> V případě vyšší spotřeby materiálu, než bylo uvedeno v nabídce, si zhotovitel vyhrazuje právo naúčtovat rozdíl skutečné spotřeby materiálu.' +
-        normaText +
-        ' Při nerovnosti podkladu nebo vyšší spotřebě bude účtováno ' + cenaNavicM3.toLocaleString('cs-CZ') + ' Kč/m³ spotřebovaného materiálu navíc.\n' +
+        '  <strong>Dodatek:</strong> V případě vyšší spotřeby materiálu, než bylo uvedeno v nabídce, si zhotovitel vyhrazuje právo naúčtovat rozdíl skutečné spotřeby materiálu. ' +
+        'Normované množství ' + objem + ' m³. ' +
+        'Při nerovnosti podkladu nebo vyšší spotřebě bude účtováno ' + cenaNavicM3.toLocaleString('cs-CZ') + ' Kč/m³ spotřebovaného materiálu navíc.\n' +
         '</div>\n';
     })() +
     '</div>\n' +
