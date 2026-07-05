@@ -141,6 +141,7 @@
   .doprava-info .di-val { font-family: 'DM Mono', monospace; color: var(--text); }
 
 @media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
   body { background: #fff !important; padding: 0 !important; }
   header, .layout > .card:not(.full) { display: none !important; }
   .card.full { display: block !important; box-shadow: none !important; border: none !important; }
@@ -1310,6 +1311,7 @@ function vytvorHtmlNabidku(autoprint) {
     '.podpis small { display: block; font-size: 11px; color: rgba(255,255,255,0.6); font-weight: 400; margin-top: 2px; }',
     '@media print {',
     '  @page { margin: 10mm; size: A4; }',
+    '  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }',
     '  body { margin: 0; }',
     '  .params .param { padding: 6px 8px; }',
     '  .params .param .val { font-size: 14px; }',
