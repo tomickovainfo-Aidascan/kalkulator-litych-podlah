@@ -458,17 +458,21 @@ const POBOCKY = [
   { id:'BR_JAROMER', name:'Jaroměř', addr:'Langiewiczova, 551 02 Jaroměř', lat:50.3475, lon:15.9332, phone:'606 648 249', email:'betonarna.jaromer@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_OHRAZENICE', name:'Ohrazenice / Semily', addr:'Ohrazenice 270, 511 01 Semily', lat:50.5979, lon:15.1176, phone:'602 464 270', email:'betonarna.ohrazenice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_LIBEREC', name:'Liberec', addr:'Londýnská 460, 460 11 Liberec', lat:50.7782, lon:15.0322, phone:'602 464 280', email:'betonarna.liberec@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
-  { id:'BR_HK_SPRAVCICE', name:'Hradec Králové – Správčice', addr:'Jana Černého, 503 02 Předměřice n.L.', lat:50.255, lon:15.812, phone:'606 627 647', email:'betonarna.spravcice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
-  { id:'BR_HK_PLACICE', name:'Hradec Králové – Plačice', addr:'Pardubická, 500 04 Hradec Králové', lat:50.2, lon:15.785, phone:'606 613 905', email:'betonarna.placice@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_HK_SPRAVCICE', name:'Hradec Králové – Správčice', addr:'Jana Černého, 503 02 Předměřice n.L.', lat:50.255, lon:15.812, phone:'606 627 647', email:'betonarna.spravcice@cemex.com', confirmed:['MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_HK_PLACICE', name:'Hradec Králové – Plačice', addr:'Pardubická, 500 04 Hradec Králové', lat:50.2, lon:15.785, phone:'606 613 905', email:'betonarna.placice@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_HK_SLEZSKE', name:'Hradec Králové – Slezské Předm.', addr:'Bratří Štefanů 986, 500 03 HK', lat:50.216, lon:15.861, phone:'606 642 843', email:'betonarna.hradec@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
-  { id:'BR_SEMTIN', name:'Pardubice – Semtín', addr:'Semtín 102, 533 54 Pardubice', lat:50.045, lon:15.725, phone:'602 186 298', email:'betonarna.semtin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_SEMTIN', name:'Pardubice – Semtín', addr:'Semtín 102, 533 54 Pardubice', lat:50.045, lon:15.725, phone:'602 186 298', email:'betonarna.semtin@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_MLADA_BOLESLAV', name:'Mladá Boleslav', addr:'Dukelská, 293 01 Mladá Boleslav', lat:50.416, lon:14.909, phone:'602 252 489', email:'betonarna.mladaboleslav@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
-  { id:'BR_PODEBRADY', name:'Poděbrady', addr:'Za Bažantnicí, 290 01 Poděbrady', lat:50.142, lon:15.119, phone:'606 635 978', email:'betonarna.podebrady@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
-  { id:'BR_KOLIN', name:'Kolín', addr:'Veltrubská 1527, 280 02 Kolín', lat:50.034, lon:15.217, phone:'606 635 977', email:'betonarna.kolin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_CASLAV', name:'Čáslav', addr:'Chrudimská, 286 01 Čáslav', lat:49.911, lon:15.389, phone:'602 202 690', email:'betonarna.caslav@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_MELNIK', name:'Mělník', addr:'276 01 Mělník-Pšovka', lat:50.35, lon:14.474, phone:'602 770 982', email:'betonarna.melnik@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_DECIN', name:'Děčín', addr:'Benešovská, 405 01 Děčín', lat:50.773, lon:14.201, phone:'602 464 202', email:'betonarna.decin@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
   { id:'BR_USTI', name:'Ústí nad Labem', addr:'Drážďanská 74, 400 07 Ústí n.L.', lat:50.66, lon:14.047, phone:'602 614 209', email:'betonarna.usti@cemex.com', confirmed:['MAT_BETON_STANDARD','MAT_CM'] },
+
+  // Nové pobočky dle Honzy Peterky (web CEMEX neodpovídá realitě)
+  { id:'BR_HK_STEFANU', name:'Hradec Králové – Slezské Předm.', lat:50.2207, lon:15.8764, addr:'Bratří Štefanů 986, Hradec Králové', phone:'606 642 843', email:'betonarna.hradec@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_KOLIN',      name:'Kolín',                           lat:50.0104, lon:15.2076, addr:'Veltrubská 1527, Kolín',              phone:'606 635 977', email:'betonarna.kolin@cemex.com',  confirmed:['MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_PODEBRADY',  name:'Poděbrady',                       lat:50.1436, lon:15.1232, addr:'Za Bažantnicí 51, Poděbrady',         phone:'606 635 978', email:'betonarna.podebrady@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
+  { id:'BR_USTI_ORL',   name:'Ústí nad Orlicí',                 lat:49.9564, lon:16.4181, addr:'Moravská 537, Ústí nad Orlicí',        phone:'724 222 843', email:'betonarna.ustinadorlici@cemex.com', confirmed:['MAT_CEMLEVEL','MAT_ANHYLEVEL','MAT_BETON_STANDARD','MAT_CM'] },
 ];
 
 // Dopravní tabulka CEMEX (bez DPH, Kč/m³) – pásma = vzdálenost tam a zpět
