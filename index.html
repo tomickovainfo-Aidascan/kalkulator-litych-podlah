@@ -874,7 +874,10 @@ function calc() {
   const jeAnhydrit = selectedMatId && selectedMatId.indexOf('anhylevel') === 0;
   const pMix1 = fVal('c-pumpa-' + pk + '-m1');
   const pMixN = fVal('c-pumpa-' + pk + '-mn');
-  const cenaPumpa = pMix1 + Math.max(0, pocetMixu - 1) * pMixN;
+  // Cena pumpy: RD (DPH 12%) = paušál, komerční (DPH 21%) = 1. mix + příplatek za další
+  const cenaPumpa = stateDph === 12
+    ? pMix1
+    : pMix1 + Math.max(0, pocetMixu - 1) * pMixN;
   const hintPumpa = document.getElementById('hint-pumpa-warn');
   if (hintPumpa) {
     hintPumpa.textContent = (statePumpa === 'male' && !jeAnhydrit)
@@ -1147,7 +1150,10 @@ function vytvorHtmlNabidku(autoprint) {
   var pk       = statePumpa === 'male' ? 'male' : 'velke';
   var pMix1    = fVal('c-pumpa-' + pk + '-m1');
   var pMixN    = fVal('c-pumpa-' + pk + '-mn');
-  var cenaPumpa   = Math.round(pMix1 + Math.max(0, pocetMixu - 1) * pMixN);
+  // Cena pumpy: RD (DPH 12%) = paušál, komerční (DPH 21%) = 1. mix + příplatek za další
+  var cenaPumpa = stateDph === 12
+    ? Math.round(pMix1)
+    : Math.round(pMix1 + Math.max(0, pocetMixu - 1) * pMixN);
   var pumpaNazev  = statePumpa === 'male' ? 'Šnekové čerpadlo' : 'Pístové čerpadlo';
 
   // Práce
